@@ -1,0 +1,34 @@
+{
+  "name": "decentral-blockchain",
+  "version": "1.0.0",
+  "description": "Dezentrale Blockchain mit mehreren Nodes für ÜK107",
+  "main": "src/network/networkNode.js",
+  "scripts": {
+    "node_3000": "nodemon src/network/networkNode.js 3000 http://localhost:3000",
+    "node_3001": "nodemon src/network/networkNode.js 3001 http://localhost:3001",
+    "node_3002": "nodemon src/network/networkNode.js 3002 http://localhost:3002",
+    "node_3003": "nodemon src/network/networkNode.js 3003 http://localhost:3003",
+    "node_3004": "nodemon src/network/networkNode.js 3004 http://localhost:3004",
+    "nodes": "npm-run-all --parallel node_3000 node_3001 node_3002 node_3003 node_3004",
+    "test": "node src/tests/test.js",
+    "test:api": "node src/tests/apitest.js",
+    "start": "nodemon src/network/networkNode.js 3000 http://localhost:3000"
+  },
+  "author": "Dein Name",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "crypto-js": "^4.2.0",
+    "dotenv": "^16.4.5",
+    "elliptic": "^6.5.4",
+    "express": "^4.18.2",
+    "node-fetch": "^3.3.2",
+    "request-promise": "^4.2.6",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10",
+    "npm-run-all": "^4.1.5"
+  }
+}
