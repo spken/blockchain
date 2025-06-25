@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { blockchainAPI } from "@/services/api";
+import { useWalletContext } from "@/contexts/WalletContext";
 import type {
   Blockchain,
   Block,
@@ -155,6 +156,7 @@ export function useWallets() {
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { storeWallets } = useWalletContext();
 
   const fetchWallets = useCallback(async () => {
     try {
@@ -162,23 +164,27 @@ export function useWallets() {
       setError(null);
       const data = await blockchainAPI.getWallets();
       setWallets(data);
+      // Store private keys for all wallets in the context
+      storeWallets(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch wallets");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [storeWallets]);
 
   const createWallet = useCallback(async (): Promise<Wallet> => {
     try {
       const newWallet = await blockchainAPI.createWallet();
       setWallets((prev) => [...prev, newWallet]);
+      // Store the private key for the new wallet
+      storeWallets([newWallet]);
       return newWallet;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create wallet");
       throw err;
     }
-  }, []);
+  }, [storeWallets]);
 
   useEffect(() => {
     fetchWallets();

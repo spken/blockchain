@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { BlockchainOverview } from "@/components/BlockchainOverview";
 import { WalletManager } from "@/components/WalletManager";
 import { TransactionForm } from "@/components/TransactionManager";
@@ -37,6 +38,7 @@ function App() {
     refetch: refetchBlocks,
   } = useBlocks();
   const {
+    mempool,
     loading: mempoolLoading,
     error: mempoolError,
     refetch: refetchMempool,
@@ -182,9 +184,20 @@ function App() {
                 <Pickaxe className="w-4 h-4" />
                 <span className="hidden sm:inline">Mining</span>
               </TabsTrigger>
-              <TabsTrigger value="mempool" className="flex items-center gap-2">
+              <TabsTrigger
+                value="mempool"
+                className="flex items-center gap-2 relative"
+              >
                 <Clock className="w-4 h-4" />
                 <span className="hidden sm:inline">Mempool</span>
+                {mempool.length > 0 && (
+                  <Badge
+                    variant="secondary"
+                    className="ml-1 px-1.5 py-0.5 text-xs bg-blue-100 text-blue-800 animate-pulse"
+                  >
+                    {mempool.length}
+                  </Badge>
+                )}
               </TabsTrigger>
               <TabsTrigger value="network" className="flex items-center gap-2">
                 <Network className="w-4 h-4" />
@@ -279,7 +292,9 @@ function App() {
                   <h2 className="text-2xl font-bold text-gray-900 mb-6">
                     Transaction Management
                   </h2>
-                  <TransactionForm />
+                  <TransactionForm
+                    onSwitchToMempool={() => setActiveTab("mempool")}
+                  />
                 </div>
               </ErrorBoundary>
             </TabsContent>

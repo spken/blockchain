@@ -11,9 +11,13 @@ import { Input } from "@/components/ui/input";
 import { ErrorFallback } from "@/components/ui/error-fallback";
 import { useTransactions, useWallets } from "@/hooks/useBlockchain";
 import { useWalletContext } from "@/contexts/WalletContext";
-import { Send, DollarSign } from "lucide-react";
+import { Send, DollarSign, Eye } from "lucide-react";
 
-export function TransactionForm() {
+export function TransactionForm({
+  onSwitchToMempool,
+}: {
+  onSwitchToMempool?: () => void;
+}) {
   try {
     const { wallets } = useWallets();
     const { createTransaction } = useTransactions();
@@ -202,7 +206,20 @@ export function TransactionForm() {
                     : "bg-red-50 text-red-800 border border-red-200"
                 }`}
               >
-                {message.text}
+                <div className="flex items-center justify-between">
+                  <span>{message.text}</span>
+                  {message.type === "success" && onSwitchToMempool && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={onSwitchToMempool}
+                      className="ml-3 bg-white hover:bg-green-100 border-green-300 text-green-700 hover:text-green-800 transition-colors"
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      View in Mempool
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
 

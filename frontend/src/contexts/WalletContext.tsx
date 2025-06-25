@@ -6,6 +6,7 @@ interface WalletContextType {
   selectedWallet: Wallet | null;
   setSelectedWallet: (wallet: Wallet | null) => void;
   getPrivateKey: (publicKey: string) => string | null;
+  storeWallets: (wallets: Wallet[]) => void;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -33,12 +34,25 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     [walletStore],
   );
 
+  const storeWallets = useCallback((wallets: Wallet[]) => {
+    setWalletStore((prev) => {
+      const newStore = new Map(prev);
+      wallets.forEach((wallet) => {
+        if (wallet.privateKey) {
+          newStore.set(wallet.publicKey, wallet.privateKey);
+        }
+      });
+      return newStore;
+    });
+  }, []);
+
   return (
     <WalletContext.Provider
       value={{
         selectedWallet,
         setSelectedWallet: handleSetSelectedWallet,
         getPrivateKey,
+        storeWallets,
       }}
     >
       {children}
