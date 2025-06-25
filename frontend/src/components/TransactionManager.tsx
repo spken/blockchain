@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ErrorFallback } from "@/components/ui/error-fallback";
-import { useTransactions, useWallets, useMempoolRefresh } from "@/hooks/useBlockchain";
+import { useTransactions, useWallets, useMempoolRefresh, useWalletBalance, useMempool } from "@/hooks/useBlockchain";
 import { useWalletContext } from "@/contexts/WalletContext";
 import { Send, DollarSign, Eye } from "lucide-react";
 
@@ -23,6 +23,7 @@ export function TransactionForm({
     const { createTransaction } = useTransactions();
     const { triggerGlobalMempoolRefresh } = useMempoolRefresh();
     const { getPrivateKey } = useWalletContext();
+    const { mempool } = useMempool();
 
     const [fromAddress, setFromAddress] = useState("");
     const [toAddress, setToAddress] = useState("");
@@ -34,6 +35,21 @@ export function TransactionForm({
       type: "success" | "error";
       text: string;
     } | null>(null);
+
+    // Get balance for the selected from address
+    const { balance: currentBalance, loading: balanceLoading } = useWalletBalance(fromAddress || null);
+
+    // Calculate available balance considering pending transactions
+    const calculateAvailableBalance = (address: string) => {
+      if (!address || !mempool) return currentBalance;
+      
+      // Calculate total amount being spent in pending transactions from this address
+      const pendingSpent = mempool
+        .filter(tx => tx.fromAddress === address)
+        .reduce((total, tx) => total + tx.amount + tx.fee, 0);
+      
+      return currentBalance - pendingSpent;
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
@@ -59,6 +75,24 @@ export function TransactionForm({
         setMessage({
           type: "error",
           text: "Private key not found for selected wallet",
+        });
+        return;
+      }
+
+      // Check if wallet has sufficient balance
+      const requestedAmount = parseFloat(amount);
+      const requestedFee = parseFloat(fee) || 0;
+      const totalRequired = requestedAmount + requestedFee;
+      const availableBalance = calculateAvailableBalance(fromAddress);
+
+      if (availableBalance < totalRequired) {
+        const pendingSpent = mempool
+          .filter(tx => tx.fromAddress === fromAddress)
+          .reduce((total, tx) => total + tx.amount + tx.fee, 0);
+        
+        setMessage({
+          type: "error",
+          text: `Insufficient balance. Available: ${availableBalance.toFixed(2)} coins, Required: ${totalRequired.toFixed(2)} coins${pendingSpent > 0 ? ` (${pendingSpent.toFixed(2)} coins locked in pending transactions)` : ""}`,
         });
         return;
       }
@@ -164,10 +198,38 @@ export function TransactionForm({
                     placeholder="0.00"
                     required
                   />
-                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center gap-2">
+                    {fromAddress && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const maxAmount = Math.max(0, calculateAvailableBalance(fromAddress) - (parseFloat(fee) || 0));
+                          setAmount(maxAmount.toFixed(2));
+                        }}
+                        className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 transition-colors"
+                      >
+                        Max
+                      </button>
+                    )}
                     <span className="text-gray-500 text-sm">coins</span>
                   </div>
                 </div>
+                {fromAddress && (
+                  <div className="mt-1 text-xs">
+                    {balanceLoading ? (
+                      <span className="text-gray-500">Loading balance...</span>
+                    ) : (
+                      <span className={`${calculateAvailableBalance(fromAddress) < (parseFloat(amount) || 0) + (parseFloat(fee) || 0) ? 'text-red-600' : 'text-green-600'}`}>
+                        Available: {calculateAvailableBalance(fromAddress).toFixed(2)} coins
+                        {mempool.filter(tx => tx.fromAddress === fromAddress).length > 0 && (
+                          <span className="text-orange-600 ml-1">
+                            ({mempool.filter(tx => tx.fromAddress === fromAddress).reduce((total, tx) => total + tx.amount + tx.fee, 0).toFixed(2)} pending)
+                          </span>
+                        )}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div>
@@ -228,9 +290,22 @@ export function TransactionForm({
             )}
 
             <div className="flex justify-end space-x-2">
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Creating..." : "Send Transaction"}
-              </Button>
+              {(() => {
+                const hasInsufficientBalance = Boolean(fromAddress && amount && 
+                  calculateAvailableBalance(fromAddress) < (parseFloat(amount) || 0) + (parseFloat(fee) || 0));
+                
+                return (
+                  <Button 
+                    type="submit" 
+                    disabled={isSubmitting || hasInsufficientBalance}
+                    className={hasInsufficientBalance ? "bg-gray-400 hover:bg-gray-400" : ""}
+                  >
+                    {isSubmitting ? "Creating..." : 
+                     hasInsufficientBalance ? "Insufficient Balance" : "Send Transaction"
+                    }
+                  </Button>
+                );
+              })()}
             </div>
           </form>{" "}
         </CardContent>
