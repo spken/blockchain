@@ -28,7 +28,9 @@ export function BlockchainOverview() {
         const result = await blockchainAPI.validateBlockchain();
         setValidationResult({
           isValid: result.valid,
-          message: result.valid ? "Blockchain is valid" : "Blockchain validation failed"
+          message: result.valid
+            ? "Blockchain is valid"
+            : "Blockchain validation failed",
         });
       } catch (error) {
         setValidationResult({
