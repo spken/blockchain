@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ErrorFallback } from "@/components/ui/error-fallback";
-import { useMining, useBlockchain, useConsensus } from "@/hooks/useBlockchain";
+import { useMining, useBlockchain, useConsensus, useMempoolRefresh } from "@/hooks/useBlockchain";
 import { useWalletContext } from "@/contexts/WalletContext";
 import { blockchainAPI } from "@/services/api";
 import type { Wallet } from "@/types/blockchain";
@@ -26,6 +26,7 @@ export function MiningInterface() {
     const { mining, mineBlock } = useMining();
     const { refetch: refetchBlockchain } = useBlockchain();
     const { runConsensus, running: consensusRunning } = useConsensus();
+    const { triggerGlobalMempoolRefresh } = useMempoolRefresh();
     const { selectedWallet } = useWalletContext();
 
     const [message, setMessage] = useState<{
@@ -99,6 +100,8 @@ export function MiningInterface() {
           text: `Block mined successfully! ${result.note || "Hash: " + (result.block?.hash?.slice(0, 16) + "..." || "Unknown")}`,
         });
         await refetchBlockchain();
+        // Refresh mempool immediately since transactions were removed
+        triggerGlobalMempoolRefresh();
       } catch (error) {
         setMessage({
           type: "error",

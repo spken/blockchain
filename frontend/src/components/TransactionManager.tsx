@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ErrorFallback } from "@/components/ui/error-fallback";
-import { useTransactions, useWallets } from "@/hooks/useBlockchain";
+import { useTransactions, useWallets, useMempoolRefresh } from "@/hooks/useBlockchain";
 import { useWalletContext } from "@/contexts/WalletContext";
 import { Send, DollarSign, Eye } from "lucide-react";
 
@@ -21,6 +21,7 @@ export function TransactionForm({
   try {
     const { wallets } = useWallets();
     const { createTransaction } = useTransactions();
+    const { triggerGlobalMempoolRefresh } = useMempoolRefresh();
     const { getPrivateKey } = useWalletContext();
 
     const [fromAddress, setFromAddress] = useState("");
@@ -74,6 +75,9 @@ export function TransactionForm({
           payload || undefined,
           privateKey,
         );
+
+        // Immediately refresh all mempool displays
+        triggerGlobalMempoolRefresh();
 
         setMessage({
           type: "success",

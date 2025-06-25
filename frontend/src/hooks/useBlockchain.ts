@@ -89,6 +89,9 @@ export function useMempool() {
     }
   }, []);
 
+  // Register for global mempool refresh events
+  useGlobalMempoolRefresh(fetchMempool);
+
   useEffect(() => {
     fetchMempool();
     // Refresh mempool every 5 seconds
@@ -136,6 +139,9 @@ export function useMempoolSorted(
       setLoading(false);
     }
   }, [sortBy]);
+
+  // Register for global mempool refresh events
+  useGlobalMempoolRefresh(fetchMempool);
 
   useEffect(() => {
     fetchMempool();
@@ -517,4 +523,24 @@ export function useAutoNetworkSetup() {
     autoSetupError,
     runAutoNetworkSetup,
   };
+}
+
+// Global mempool refresh event system
+const mempoolRefreshListeners = new Set<() => void>();
+
+export function useMempoolRefresh() {
+  const triggerGlobalMempoolRefresh = useCallback(() => {
+    mempoolRefreshListeners.forEach((listener) => listener());
+  }, []);
+
+  return { triggerGlobalMempoolRefresh };
+}
+
+function useGlobalMempoolRefresh(refreshFn: () => void) {
+  useEffect(() => {
+    mempoolRefreshListeners.add(refreshFn);
+    return () => {
+      mempoolRefreshListeners.delete(refreshFn);
+    };
+  }, [refreshFn]);
 }
