@@ -238,11 +238,11 @@ export function BlockchainOverview() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between space-x-4">
               <div className="flex-1">
                 {validationResult && (
                   <div
-                    className={`flex items-center gap-2 p-3 rounded-md ${
+                    className={`flex items-center gap-2 p-2 rounded-md ${
                       validationResult.isValid
                         ? "bg-green-50 text-green-800 border border-green-200"
                         : "bg-red-50 text-red-800 border border-red-200"
