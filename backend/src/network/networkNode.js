@@ -198,7 +198,7 @@ app.get("/transactions/pending", (req, res) => {
 app.post("/mine", async (req, res) => {
   try {
     const { miningRewardAddress, limit } = req.body;
-    
+
     if (!miningRewardAddress) {
       return res.status(400).json({
         message: "Mining reward address is required",
@@ -214,7 +214,7 @@ app.post("/mine", async (req, res) => {
         console.log(`Failed to add transaction ${tx.id}: ${error.message}`);
       }
     });
-    
+
     // Mine the block (this will add the mining reward transaction internally)
     blockchain.minePendingTransactions(miningRewardAddress);
     mempool.removeTransactions(transactionsToMine);
@@ -228,7 +228,7 @@ app.post("/mine", async (req, res) => {
         method: "POST",
         body: { newBlock },
         json: true,
-      }).catch(err => {
+      }).catch((err) => {
         console.log(`Failed to broadcast to ${networkNodeUrl}: ${err.message}`);
         return { error: err.message, nodeUrl: networkNodeUrl };
       });
@@ -236,48 +236,56 @@ app.post("/mine", async (req, res) => {
 
     try {
       const results = await Promise.all(requestPromises);
-      
+
       // Count successful vs failed broadcasts
-      const successful = results.filter(result => !result.error);
-      const failed = results.filter(result => result.error);
-      
-      console.log(`Broadcasting results: ${successful.length} successful, ${failed.length} failed`);
-      
+      const successful = results.filter((result) => !result.error);
+      const failed = results.filter((result) => result.error);
+
+      console.log(
+        `Broadcasting results: ${successful.length} successful, ${failed.length} failed`,
+      );
+
       if (failed.length > 0) {
-        console.log("Failed broadcasts:", failed.map(f => `${f.nodeUrl}: ${f.error}`).join(", "));
+        console.log(
+          "Failed broadcasts:",
+          failed.map((f) => `${f.nodeUrl}: ${f.error}`).join(", "),
+        );
       }
-      
+
       // If at least some broadcasts succeeded, or if this is a single-node network
       if (successful.length > 0 || blockchain.networkNodes.length === 0) {
         res.json({
-          message: blockchain.networkNodes.length === 0 
-            ? "Block erfolgreich gemint (kein Netzwerk für Broadcasting)"
-            : `Block erfolgreich gemint und an ${successful.length}/${blockchain.networkNodes.length} Nodes gesendet.`,
+          message:
+            blockchain.networkNodes.length === 0
+              ? "Block erfolgreich gemint (kein Netzwerk für Broadcasting)"
+              : `Block erfolgreich gemint und an ${successful.length}/${blockchain.networkNodes.length} Nodes gesendet.`,
           block: newBlock,
           broadcastStats: {
             successful: successful.length,
             failed: failed.length,
-            total: blockchain.networkNodes.length
-          }
+            total: blockchain.networkNodes.length,
+          },
         });
       } else {
         // All broadcasts failed, but block was still mined
         res.json({
-          message: "Block erfolgreich gemint, aber Broadcasting an alle Nodes fehlgeschlagen.",
+          message:
+            "Block erfolgreich gemint, aber Broadcasting an alle Nodes fehlgeschlagen.",
           block: newBlock,
           broadcastError: "All broadcasts failed",
           broadcastStats: {
             successful: 0,
             failed: failed.length,
-            total: blockchain.networkNodes.length
-          }
+            total: blockchain.networkNodes.length,
+          },
         });
       }
     } catch (err) {
       // This shouldn't happen since we're catching individual promise errors
       console.log("Unexpected broadcasting error:", err.message);
       res.json({
-        message: "Block erfolgreich gemint, aber unerwarteter Broadcasting-Fehler.",
+        message:
+          "Block erfolgreich gemint, aber unerwarteter Broadcasting-Fehler.",
         block: newBlock,
         broadcastError: err.message,
       });
@@ -299,13 +307,14 @@ app.post("/receive-new-block", async (req, res) => {
 
     // Validate that the new block's previousHash matches the last block's hash
     const correctHash = lastBlock.hash === newBlock.previousHash;
-    
+
     // Additional validation: check if the block is valid
-    const blockIsValid = newBlock.hash && newBlock.previousHash && newBlock.transactions;
+    const blockIsValid =
+      newBlock.hash && newBlock.previousHash && newBlock.transactions;
 
     if (correctHash && blockIsValid) {
       // Convert transactions back to Transaction instances if needed
-      const transactions = newBlock.transactions.map(tx => {
+      const transactions = newBlock.transactions.map((tx) => {
         if (!(tx instanceof Transaction)) {
           const transaction = new Transaction(
             tx.fromAddress,
@@ -313,7 +322,7 @@ app.post("/receive-new-block", async (req, res) => {
             tx.amount,
             tx.fee,
             tx.payload,
-            tx.id
+            tx.id,
           );
           transaction.timestamp = tx.timestamp;
           transaction.signature = tx.signature;
@@ -328,12 +337,12 @@ app.post("/receive-new-block", async (req, res) => {
         transactions: transactions,
         previousHash: newBlock.previousHash,
         nonce: newBlock.nonce,
-        hash: newBlock.hash
+        hash: newBlock.hash,
       };
 
       blockchain.chain.push(blockToAdd);
       blockchain.pendingTransactions = [];
-      
+
       console.log(`New block accepted and added: ${newBlock.hash}`);
       res.json({
         note: "Neuer Block akzeptiert und hinzugefügt",
@@ -341,24 +350,30 @@ app.post("/receive-new-block", async (req, res) => {
       });
     } else if (!correctHash) {
       // Fork detected! Try to resolve by running consensus
-      console.log(`Fork detected. Last block hash: ${lastBlock.hash}, New block previousHash: ${newBlock.previousHash}`);
+      console.log(
+        `Fork detected. Last block hash: ${lastBlock.hash}, New block previousHash: ${newBlock.previousHash}`,
+      );
       console.log(`Attempting to resolve fork through consensus...`);
-      
+
       try {
         // Run consensus to get the longest chain from the network
-        const requestPromises = blockchain.networkNodes.map((networkNodeUrl) => {
-          return rp({
-            uri: networkNodeUrl + "/blockchain",
-            method: "GET",
-            json: true,
-          }).catch(err => {
-            console.log(`Failed to get blockchain from ${networkNodeUrl}: ${err.message}`);
-            return null;
-          });
-        });
+        const requestPromises = blockchain.networkNodes.map(
+          (networkNodeUrl) => {
+            return rp({
+              uri: networkNodeUrl + "/blockchain",
+              method: "GET",
+              json: true,
+            }).catch((err) => {
+              console.log(
+                `Failed to get blockchain from ${networkNodeUrl}: ${err.message}`,
+              );
+              return null;
+            });
+          },
+        );
 
         const blockchains = await Promise.all(requestPromises);
-        const validBlockchains = blockchains.filter(bc => bc !== null);
+        const validBlockchains = blockchains.filter((bc) => bc !== null);
 
         let maxLength = blockchain.chain.length;
         let newLongestChain = null;
@@ -366,9 +381,12 @@ app.post("/receive-new-block", async (req, res) => {
 
         // Check if any remote chain is longer and valid
         validBlockchains.forEach((remoteChain, index) => {
-          if (remoteChain && remoteChain.chain && 
-              remoteChain.chain.length > maxLength && 
-              isValidChain(remoteChain.chain)) {
+          if (
+            remoteChain &&
+            remoteChain.chain &&
+            remoteChain.chain.length > maxLength &&
+            isValidChain(remoteChain.chain)
+          ) {
             maxLength = remoteChain.chain.length;
             newLongestChain = remoteChain.chain;
             longestChainSource = blockchain.networkNodes[index];
@@ -386,7 +404,7 @@ app.post("/receive-new-block", async (req, res) => {
         if (newLongestChain) {
           blockchain.chain = newLongestChain;
           blockchain.pendingTransactions = [];
-          
+
           // Clean up mempool
           const confirmedTxIds = new Set();
           blockchain.chain.forEach((block) => {
@@ -396,44 +414,46 @@ app.post("/receive-new-block", async (req, res) => {
             (tx) => !confirmedTxIds.has(tx.id),
           );
 
-          console.log(`Fork resolved! Adopted longer chain from ${longestChainSource}. New length: ${blockchain.chain.length}`);
+          console.log(
+            `Fork resolved! Adopted longer chain from ${longestChainSource}. New length: ${blockchain.chain.length}`,
+          );
           res.json({
             note: "Fork aufgelöst - längere Chain übernommen",
             block: newBlock,
             chainLength: blockchain.chain.length,
-            source: longestChainSource
+            source: longestChainSource,
           });
         } else {
           console.log(`Fork resolution failed - no longer valid chain found`);
-          res.status(400).json({ 
-            note: "Block abgelehnt - Fork konnte nicht aufgelöst werden", 
+          res.status(400).json({
+            note: "Block abgelehnt - Fork konnte nicht aufgelöst werden",
             block: newBlock,
             reason: "No longer valid chain available",
-            currentChainLength: blockchain.chain.length
+            currentChainLength: blockchain.chain.length,
           });
         }
       } catch (consensusError) {
         console.error("Error during fork resolution:", consensusError);
-        res.status(400).json({ 
-          note: "Block abgelehnt - Fork-Auflösung fehlgeschlagen", 
+        res.status(400).json({
+          note: "Block abgelehnt - Fork-Auflösung fehlgeschlagen",
           block: newBlock,
           reason: "Fork resolution failed",
-          error: consensusError.message
+          error: consensusError.message,
         });
       }
     } else {
       console.log(`Block rejected due to validation failure`);
-      res.status(400).json({ 
-        note: "Block abgelehnt - Validierung fehlgeschlagen", 
+      res.status(400).json({
+        note: "Block abgelehnt - Validierung fehlgeschlagen",
         block: newBlock,
-        reason: "Block validation failed"
+        reason: "Block validation failed",
       });
     }
   } catch (error) {
     console.error("Error processing new block:", error);
-    res.status(500).json({ 
-      note: "Fehler beim Verarbeiten des neuen Blocks", 
-      error: error.message 
+    res.status(500).json({
+      note: "Fehler beim Verarbeiten des neuen Blocks",
+      error: error.message,
     });
   }
 });
@@ -507,7 +527,7 @@ app.post("/initialize-network", async (req, res) => {
     const availableNodes = [];
 
     console.log("Suche nach verfügbaren Nodes...");
-    
+
     // Überprüfe jeden Port auf Verfügbarkeit
     for (let port of allPossiblePorts) {
       const nodeUrl = `http://localhost:${port}`;
@@ -519,7 +539,7 @@ app.post("/initialize-network", async (req, res) => {
           json: true,
           timeout: 2000, // 2 Sekunden Timeout
         });
-        
+
         if (response) {
           availableNodes.push(nodeUrl);
           console.log(`✓ Node gefunden: ${nodeUrl}`);
@@ -530,14 +550,18 @@ app.post("/initialize-network", async (req, res) => {
     }
 
     if (availableNodes.length < 2) {
-      return res.status(400).json({ 
-        error: "Mindestens 2 Nodes müssen laufen für die Netzwerk-Initialisierung",
+      return res.status(400).json({
+        error:
+          "Mindestens 2 Nodes müssen laufen für die Netzwerk-Initialisierung",
         availableNodes: availableNodes,
-        suggestion: "Starte weitere Nodes auf Ports 3000-3004"
+        suggestion: "Starte weitere Nodes auf Ports 3000-3004",
       });
     }
 
-    console.log(`${availableNodes.length} verfügbare Nodes gefunden:`, availableNodes);
+    console.log(
+      `${availableNodes.length} verfügbare Nodes gefunden:`,
+      availableNodes,
+    );
 
     // 2. Bulk-Registrierung auf allen verfügbaren Nodes
     for (let nodeUrl of availableNodes) {
@@ -546,27 +570,31 @@ app.post("/initialize-network", async (req, res) => {
         await rp({
           uri: nodeUrl + "/register-nodes-bulk",
           method: "POST",
-          body: { allNetworkNodes: availableNodes.filter((url) => url !== nodeUrl) },
+          body: {
+            allNetworkNodes: availableNodes.filter((url) => url !== nodeUrl),
+          },
           json: true,
           timeout: 5000,
         });
         console.log(`✓ Erfolgreich registriert: ${nodeUrl}`);
       } catch (error) {
-        console.log(`✗ Registrierung fehlgeschlagen: ${nodeUrl} (${error.message})`);
+        console.log(
+          `✗ Registrierung fehlgeschlagen: ${nodeUrl} (${error.message})`,
+        );
       }
     }
 
     // 3. Wallets auf dem ersten verfügbaren Node erzeugen
     const primaryNode = availableNodes[0];
     console.log(`Erstelle Wallets auf primärem Node: ${primaryNode}`);
-    
+
     const senderWallet = await rp({
       uri: primaryNode + "/wallet",
       method: "POST",
       json: true,
       timeout: 5000,
     });
-    
+
     const receiverWallet = await rp({
       uri: primaryNode + "/wallet",
       method: "POST",
@@ -575,7 +603,9 @@ app.post("/initialize-network", async (req, res) => {
     });
 
     // 4. Faucet für den Sender (Guthaben aufladen)
-    console.log(`Lade Guthaben für Sender-Wallet auf: ${senderWallet.publicKey}`);
+    console.log(
+      `Lade Guthaben für Sender-Wallet auf: ${senderWallet.publicKey}`,
+    );
     await rp({
       uri: primaryNode + "/faucet",
       method: "POST",
@@ -590,19 +620,18 @@ app.post("/initialize-network", async (req, res) => {
       networkInfo: {
         totalNodes: availableNodes.length,
         availableNodes: availableNodes,
-        primaryNode: primaryNode
+        primaryNode: primaryNode,
       },
       wallets: {
         sender: senderWallet,
-        receiver: receiverWallet
-      }
+        receiver: receiverWallet,
+      },
     });
-    
   } catch (error) {
     console.error("Fehler bei Netzwerk-Initialisierung:", error.message);
-    res.status(500).json({ 
+    res.status(500).json({
       error: error.message,
-      details: "Fehler bei der automatischen Netzwerk-Initialisierung"
+      details: "Fehler bei der automatischen Netzwerk-Initialisierung",
     });
   }
 });
@@ -673,7 +702,7 @@ function isValidChain(chain) {
 // Hilfsfunktion: Verfügbare Nodes scannen (ohne Initialisierung)
 app.get("/scan-nodes", async (req, res) => {
   console.log("Scanning für verfügbare Nodes...");
-  
+
   try {
     const allPossiblePorts = [3000, 3001, 3002, 3003, 3004];
     const scanResults = [];
@@ -683,8 +712,8 @@ app.get("/scan-nodes", async (req, res) => {
       const result = {
         url: nodeUrl,
         port: port,
-        status: 'offline',
-        error: null
+        status: "offline",
+        error: null,
       };
 
       try {
@@ -694,35 +723,36 @@ app.get("/scan-nodes", async (req, res) => {
           json: true,
           timeout: 2000,
         });
-        
+
         if (response) {
-          result.status = 'online';
+          result.status = "online";
           result.chainLength = response.chain ? response.chain.length : 0;
-          result.networkNodes = response.networkNodes ? response.networkNodes.length : 0;
+          result.networkNodes = response.networkNodes
+            ? response.networkNodes.length
+            : 0;
         }
       } catch (error) {
-        result.status = 'offline';
+        result.status = "offline";
         result.error = error.message;
       }
 
       scanResults.push(result);
     }
 
-    const onlineNodes = scanResults.filter(node => node.status === 'online');
-    
+    const onlineNodes = scanResults.filter((node) => node.status === "online");
+
     res.json({
       timestamp: new Date().toISOString(),
       totalScanned: scanResults.length,
       onlineCount: onlineNodes.length,
       offlineCount: scanResults.length - onlineNodes.length,
       nodes: scanResults,
-      readyForNetwork: onlineNodes.length >= 2
+      readyForNetwork: onlineNodes.length >= 2,
     });
-    
   } catch (error) {
-    res.status(500).json({ 
+    res.status(500).json({
       error: error.message,
-      details: "Fehler beim Scannen der Nodes"
+      details: "Fehler beim Scannen der Nodes",
     });
   }
 });

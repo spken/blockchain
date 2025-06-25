@@ -2,8 +2,8 @@ Klasse Block Verbesserungen:
 
     Timestamp klar formatieren (z.B. ISO-Format), um die Lesbarkeit und Nachvollziehbarkeit zu erhöhen
     Fehler-Handling in mineBlock verbessern:
-Prüfen, ob Difficulty realistisch ist (z.B. zwischen 1 und 6).
 
+Prüfen, ob Difficulty realistisch ist (z.B. zwischen 1 und 6).
 
 Klasse Blockchain Verbesserungen:
 
@@ -37,13 +37,13 @@ KLasse Wallet
         Saubere, modulare Trennung der Verantwortlichkeiten.
 
         Erleichtert Erweiterungen (z.B. zusätzliche Sicherheitsfeatures, Schlüsselmanagement).
-        
+
 
 CHanges 06.06.2025
 added function getTransactionsSortedByAge in class Mempool
 
 getTransactionsSortedByAge(limit = 10) {
-    return this.transactions
-      .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
-      .slice(0, limit);
-  }
+return this.transactions
+.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+.slice(0, limit);
+}

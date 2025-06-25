@@ -19,6 +19,7 @@ A modern React frontend for interacting with the blockchain network, built with 
 ## Installation
 
 1. Install dependencies:
+
 ```bash
 npm install
 ```
@@ -30,6 +31,7 @@ npm install
 ## Development
 
 Start the development server:
+
 ```bash
 npm run dev
 ```
@@ -45,28 +47,34 @@ npm run build
 ## Usage Guide
 
 ### 1. Overview Tab
+
 - View blockchain statistics
 - See latest block information
 - Validate blockchain integrity
 
 ### 2. Blocks Tab
+
 - Browse all blocks in the blockchain
 - View block details and transactions
 
 ### 3. Wallets Tab
+
 - Create new wallets
 - View wallet balances
 - Request test coins from faucet
 
 ### 4. Transactions Tab
+
 - Create new transactions
 - View pending transactions
 
 ### 5. Mining Tab
+
 - Mine new blocks and earn rewards
 - View mining progress
 
 ### 6. Mempool Tab
+
 - Monitor pending transactions
 - View transaction fees and statistics
 

@@ -1,14 +1,18 @@
-import { Card, CardContent } from '@/components/ui/card'
-import { AlertCircle, RefreshCw } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Card, CardContent } from "@/components/ui/card";
+import { AlertCircle, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface ErrorFallbackProps {
-  error: string
-  onRetry?: () => void
-  suggestion?: string
+  error: string;
+  onRetry?: () => void;
+  suggestion?: string;
 }
 
-export function ErrorFallback({ error, onRetry, suggestion }: ErrorFallbackProps) {
+export function ErrorFallback({
+  error,
+  onRetry,
+  suggestion,
+}: ErrorFallbackProps) {
   return (
     <Card className="border-red-200 bg-red-50">
       <CardContent className="p-6">
@@ -28,18 +32,20 @@ export function ErrorFallback({ error, onRetry, suggestion }: ErrorFallbackProps
         )}
       </CardContent>
     </Card>
-  )
+  );
 }
 
 interface LoadingSpinnerProps {
-  message?: string
+  message?: string;
 }
 
-export function LoadingSpinner({ message = "Loading..." }: LoadingSpinnerProps) {
+export function LoadingSpinner({
+  message = "Loading...",
+}: LoadingSpinnerProps) {
   return (
     <div className="text-center py-8">
       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
       <p className="mt-2 text-gray-500">{message}</p>
     </div>
-  )
+  );
 }
