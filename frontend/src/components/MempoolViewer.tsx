@@ -6,13 +6,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ErrorFallback, LoadingSpinner } from "@/components/ui/error-fallback";
-import { useMempool } from "@/hooks/useBlockchain";
+import { useMempoolSorted } from "@/hooks/useBlockchain";
 import { Clock, DollarSign } from "lucide-react";
+import { useState } from "react";
 
 export function MempoolViewer() {
   try {
-    const { mempool, loading, error, refetch } = useMempool();
+    const [sortBy, setSortBy] = useState<"default" | "fee" | "age">("default");
+    const { mempool, loading, error, refetch } = useMempoolSorted(sortBy);
 
     const formatDate = (dateString: string) => {
       return new Date(dateString).toLocaleString();
@@ -23,11 +26,12 @@ export function MempoolViewer() {
       return `${address.slice(0, length)}...${address.slice(-8)}`;
     };
 
-    // Safely calculate fees with error handling
+    // Calculate fees from Transaction[] structure
     const totalFees = Array.isArray(mempool)
-      ? mempool.reduce((sum, item) => {
-          const fees = typeof item?.fees === "number" ? item.fees : 0;
-          return sum + fees;
+      ? mempool.reduce((sum, transaction) => {
+          const fee =
+            typeof transaction?.fee === "number" ? transaction.fee : 0;
+          return sum + fee;
         }, 0)
       : 0;
     const averageFee = mempool.length > 0 ? totalFees / mempool.length : 0;
@@ -49,13 +53,42 @@ export function MempoolViewer() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="w-5 h-5" />
-            Mempool Viewer
-          </CardTitle>
-          <CardDescription>
-            Transactions waiting to be included in the next block
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="w-5 h-5" />
+                Mempool Viewer
+              </CardTitle>
+              <CardDescription>
+                Transactions waiting to be included in the next block
+              </CardDescription>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant={sortBy === "default" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSortBy("default")}
+              >
+                Default
+              </Button>
+              <Button
+                variant={sortBy === "fee" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSortBy("fee")}
+              >
+                <DollarSign className="w-4 h-4 mr-1" />
+                By Fee
+              </Button>
+              <Button
+                variant={sortBy === "age" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSortBy("age")}
+              >
+                <Clock className="w-4 h-4 mr-1" />
+                By Age
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {/* Mempool Statistics */}
@@ -111,9 +144,9 @@ export function MempoolViewer() {
             <div className="space-y-3">
               <h4 className="font-semibold text-gray-700 mb-3">
                 Pending Transactions
-              </h4>{" "}
-              {mempool.map((item, index) => {
-                const transactionId = item.transaction.id || `tx-${index}`;
+              </h4>
+              {mempool.map((transaction, index) => {
+                const transactionId = transaction.id || `tx-${index}`;
                 return (
                   <div
                     key={transactionId}
@@ -122,16 +155,16 @@ export function MempoolViewer() {
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <Badge variant="outline">
-                          {item.transaction.id
-                            ? `${item.transaction.id.slice(0, 8)}...`
+                          {transaction.id
+                            ? `${transaction.id.slice(0, 8)}...`
                             : `Transaction ${index + 1}`}
                         </Badge>
                         <Badge variant="secondary">
-                          Fee: {item.fees} coins
+                          Fee: {transaction.fee} coins
                         </Badge>
                       </div>
                       <span className="font-semibold text-green-600">
-                        {item.transaction.amount} coins
+                        {transaction.amount} coins
                       </span>
                     </div>
 
@@ -139,30 +172,28 @@ export function MempoolViewer() {
                       <div>
                         <p className="font-medium text-gray-600">From</p>
                         <p className="font-mono">
-                          {truncateAddress(item.transaction.fromAddress)}
+                          {truncateAddress(transaction.fromAddress)}
                         </p>
                       </div>
                       <div>
                         <p className="font-medium text-gray-600">To</p>
                         <p className="font-mono">
-                          {truncateAddress(item.transaction.toAddress)}
+                          {truncateAddress(transaction.toAddress)}
                         </p>
                       </div>
                       <div>
-                        <p className="font-medium text-gray-600">
-                          Time in Pool
-                        </p>
-                        <p>{formatDate(item.timestamp)}</p>
+                        <p className="font-medium text-gray-600">Timestamp</p>
+                        <p>{formatDate(transaction.timestamp)}</p>
                       </div>
                     </div>
 
-                    {item.transaction.payload && (
+                    {transaction.payload && (
                       <div className="mt-2">
                         <p className="font-medium text-gray-600 text-sm">
                           Payload
                         </p>
                         <p className="text-xs bg-gray-100 p-2 rounded font-mono">
-                          {JSON.stringify(item.transaction.payload)}
+                          {JSON.stringify(transaction.payload)}
                         </p>
                       </div>
                     )}

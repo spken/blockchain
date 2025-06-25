@@ -3,10 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { BlockchainOverview } from "@/components/BlockchainOverview";
 import { WalletManager } from "@/components/WalletManager";
-import {
-  TransactionForm,
-  TransactionList,
-} from "@/components/TransactionManager";
+import { TransactionForm } from "@/components/TransactionManager";
 import { MiningInterface } from "@/components/MiningInterface";
 import { MempoolViewer } from "@/components/MempoolViewer";
 import { NetworkManager } from "@/components/NetworkManager";
@@ -282,10 +279,7 @@ function App() {
                   <h2 className="text-2xl font-bold text-gray-900 mb-6">
                     Transaction Management
                   </h2>
-                  <div className="grid gap-6 lg:grid-cols-2">
-                    <TransactionForm />
-                    <TransactionList />
-                  </div>
+                  <TransactionForm />
                 </div>
               </ErrorBoundary>
             </TabsContent>

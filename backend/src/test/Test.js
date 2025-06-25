@@ -1,7 +1,7 @@
-const Blockchain = require("../core/Blockchain");
-const Transaction = require("../core/Transaction");
-const Mempool = require("../network/Mempool");
-const Wallet = require("../core/Wallet");
+const Blockchain = require("../core/Blockchain.js");
+const Transaction = require("../core/Transaction.js");
+const Mempool = require("../network/Mempool.js");
+const Wallet = require("../core/Wallet.js");
 
 // Erstellen einer Blockchain und eines Mempools
 const myBlockchain = new Blockchain();

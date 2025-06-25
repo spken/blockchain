@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
@@ -35,6 +36,7 @@ export function MiningInterface() {
     const [selectedMiningWallet, setSelectedMiningWallet] =
       useState<string>("");
     const [loadingWallets, setLoadingWallets] = useState(false);
+    const [transactionLimit, setTransactionLimit] = useState<number>(10);
 
     // Load available wallets
     useEffect(() => {
@@ -61,6 +63,7 @@ export function MiningInterface() {
       };
       fetchWallets();
     }, [selectedWallet]);
+
     const handleMine = async () => {
       if (!selectedMiningWallet) {
         setMessage({
@@ -89,11 +92,11 @@ export function MiningInterface() {
           });
         }
 
-        // Then mine the block
-        const result = await mineBlock(selectedMiningWallet);
+        // Then mine the block with transaction limit
+        const result = await mineBlock(selectedMiningWallet, transactionLimit);
         setMessage({
           type: "success",
-          text: `Block mined successfully! Hash: ${result.block.hash.slice(0, 16)}...`,
+          text: `Block mined successfully! ${result.note || "Hash: " + (result.block?.hash?.slice(0, 16) + "..." || "Unknown")}`,
         });
         await refetchBlockchain();
       } catch (error) {
@@ -116,7 +119,7 @@ export function MiningInterface() {
             Mining Interface
           </CardTitle>
           <CardDescription>Mine a new block and earn rewards</CardDescription>
-        </CardHeader>{" "}
+        </CardHeader>
         <CardContent className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -159,7 +162,28 @@ export function MiningInterface() {
                 </p>
               </div>
             )}
-          </div>{" "}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Transaction Limit
+            </label>
+            <Input
+              type="number"
+              min="1"
+              max="100"
+              value={transactionLimit}
+              onChange={(e) =>
+                setTransactionLimit(parseInt(e.target.value) || 10)
+              }
+              placeholder="Number of transactions to include (default: 10)"
+              className="w-full"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Maximum number of transactions to include in the mined block
+            </p>
+          </div>
+
           {message && (
             <div
               className={`p-3 rounded-md ${
@@ -173,6 +197,7 @@ export function MiningInterface() {
               {message.text}
             </div>
           )}
+
           <div className="bg-blue-50 p-4 rounded-lg">
             <h4 className="font-semibold text-blue-900 mb-2">
               Mining Information
@@ -180,14 +205,15 @@ export function MiningInterface() {
             <ul className="text-sm text-blue-800 space-y-1">
               <li>• Mining difficulty is set automatically by the network</li>
               <li>• Successful mining rewards you with coins</li>
+              <li>• Mining includes pending transactions in the new block</li>
               <li>
-                • Mining includes all pending transactions in the new block
+                • Transaction limit controls how many transactions to include
               </li>
               <li>• The process may take some time depending on difficulty</li>
             </ul>
-          </div>{" "}
+          </div>
+
           <div className="flex justify-end">
-            {" "}
             <Button
               onClick={handleMine}
               disabled={mining || consensusRunning || !selectedMiningWallet}
@@ -211,6 +237,7 @@ export function MiningInterface() {
               )}
             </Button>
           </div>
+
           {(mining || consensusRunning) && (
             <div className="text-center">
               <Badge variant="secondary" className="animate-pulse">
@@ -220,7 +247,7 @@ export function MiningInterface() {
               </Badge>
             </div>
           )}
-        </CardContent>{" "}
+        </CardContent>
       </Card>
     );
   } catch (err) {

@@ -26,7 +26,10 @@ export function BlockchainOverview() {
       try {
         setValidating(true);
         const result = await blockchainAPI.validateBlockchain();
-        setValidationResult(result);
+        setValidationResult({
+          isValid: result.valid,
+          message: result.valid ? "Blockchain is valid" : "Blockchain validation failed"
+        });
       } catch (error) {
         setValidationResult({
           isValid: false,
@@ -276,7 +279,7 @@ export function BlockchainOverview() {
               </Button>
             </div>
           </CardContent>
-        </Card>{" "}
+        </Card>
       </div>
     );
   } catch (err) {

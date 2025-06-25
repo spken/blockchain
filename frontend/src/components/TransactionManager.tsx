@@ -8,7 +8,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { ErrorFallback } from "@/components/ui/error-fallback";
 import { useTransactions, useWallets } from "@/hooks/useBlockchain";
 import { useWalletContext } from "@/contexts/WalletContext";
@@ -226,103 +225,4 @@ export function TransactionForm() {
   }
 }
 
-export function TransactionList() {
-  try {
-    const { transactions, loading } = useTransactions();
 
-    const formatDate = (dateString: string) => {
-      return new Date(dateString).toLocaleString();
-    };
-
-    const truncateAddress = (address: string | null, length: number = 12) => {
-      if (!address) return "Coinbase";
-      return `${address.slice(0, length)}...${address.slice(-8)}`;
-    };
-
-    if (loading) {
-      return (
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-center">Loading transactions...</div>
-          </CardContent>
-        </Card>
-      );
-    }
-
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Pending Transactions</CardTitle>
-          <CardDescription>
-            Transactions waiting to be mined into a block
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {transactions.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              No pending transactions
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {" "}
-              {transactions.map((tx, index) => (
-                <div
-                  key={tx.id || `tx-${index}`}
-                  className="p-4 border rounded-lg"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <Badge variant="outline">
-                      {tx.id
-                        ? `${tx.id.slice(0, 8)}...`
-                        : `Transaction ${index + 1}`}
-                    </Badge>
-                    <span className="font-semibold text-green-600">
-                      {tx.amount} coins
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="font-medium text-gray-600">From</p>
-                      <p className="font-mono">
-                        {truncateAddress(tx.fromAddress)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-600">To</p>
-                      <p className="font-mono">
-                        {truncateAddress(tx.toAddress)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-600">Fee</p>
-                      <p>{tx.fee} coins</p>
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-600">Time</p>
-                      <p>{formatDate(tx.timestamp)}</p>
-                    </div>
-                  </div>
-                  {tx.payload && (
-                    <div className="mt-2">
-                      <p className="font-medium text-gray-600">Payload</p>
-                      <p className="text-sm bg-gray-50 p-2 rounded">
-                        {JSON.stringify(tx.payload)}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}{" "}
-        </CardContent>
-      </Card>
-    );
-  } catch (err) {
-    return (
-      <ErrorFallback
-        error={err instanceof Error ? err.message : "Error in transaction list"}
-        suggestion="Try refreshing the page"
-      />
-    );
-  }
-}

@@ -5,7 +5,6 @@ import type {
   Block,
   Transaction,
   Wallet,
-  MempoolTransaction,
   NetworkInfo,
 } from "@/types/blockchain";
 
@@ -72,7 +71,7 @@ export function useBlocks() {
 }
 
 export function useMempool() {
-  const [mempool, setMempool] = useState<MempoolTransaction[]>([]);
+  const [mempool, setMempool] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -88,6 +87,54 @@ export function useMempool() {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    fetchMempool();
+    // Refresh mempool every 5 seconds
+    const interval = setInterval(fetchMempool, 5000);
+    return () => clearInterval(interval);
+  }, [fetchMempool]);
+
+  return {
+    mempool,
+    loading,
+    error,
+    refetch: fetchMempool,
+  };
+}
+
+export function useMempoolSorted(
+  sortBy: "fee" | "age" | "default" = "default",
+) {
+  const [mempool, setMempool] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchMempool = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      let data: Transaction[];
+      switch (sortBy) {
+        case "fee":
+          data = await blockchainAPI.getMempoolByFees();
+          break;
+        case "age":
+          data = await blockchainAPI.getMempoolByAge();
+          break;
+        default:
+          data = await blockchainAPI.getMempool();
+          break;
+      }
+
+      setMempool(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to fetch mempool");
+    } finally {
+      setLoading(false);
+    }
+  }, [sortBy]);
 
   useEffect(() => {
     fetchMempool();
@@ -248,19 +295,22 @@ export function useMining() {
   const [mining, setMining] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const mineBlock = useCallback(async (rewardAddress: string) => {
-    try {
-      setMining(true);
-      setError(null);
-      const result = await blockchainAPI.mineBlock(rewardAddress);
-      return result;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to mine block");
-      throw err;
-    } finally {
-      setMining(false);
-    }
-  }, []);
+  const mineBlock = useCallback(
+    async (rewardAddress: string, limit?: number) => {
+      try {
+        setMining(true);
+        setError(null);
+        const result = await blockchainAPI.mineBlock(rewardAddress, limit);
+        return result;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to mine block");
+        throw err;
+      } finally {
+        setMining(false);
+      }
+    },
+    [],
+  );
 
   return {
     mining,
@@ -317,7 +367,7 @@ export function useNetwork() {
   const registerNode = useCallback(
     async (newNodeUrl: string) => {
       try {
-        const result = await blockchainAPI.registerNode(newNodeUrl);
+        const result = await blockchainAPI.registerAndBroadcastNode(newNodeUrl);
         await fetchNetworkInfo(); // Refresh network info
         return result;
       } catch (err) {
@@ -327,18 +377,15 @@ export function useNetwork() {
     [fetchNetworkInfo],
   );
 
-  const initializeNetwork = useCallback(
-    async (nodeUrls: string[]) => {
-      try {
-        const result = await blockchainAPI.initializeNetwork(nodeUrls);
-        await fetchNetworkInfo(); // Refresh network info
-        return result;
-      } catch (err) {
-        throw err;
-      }
-    },
-    [fetchNetworkInfo],
-  );
+  const initializeNetwork = useCallback(async () => {
+    try {
+      const result = await blockchainAPI.initializeNetwork();
+      await fetchNetworkInfo(); // Refresh network info
+      return result;
+    } catch (err) {
+      throw err;
+    }
+  }, [fetchNetworkInfo]);
 
   useEffect(() => {
     fetchNetworkInfo();
@@ -414,38 +461,12 @@ export function useAutoNetworkSetup() {
         };
       }
 
-      console.log("🔍 No network found, scanning for available nodes...");
+      console.log("🔍 No network found, attempting to initialize network...");
 
-      // Scan for available nodes
-      const scanResults = await blockchainAPI.scanNodes();
-      console.log("📡 Scan results:", scanResults);
-
-      if (scanResults.onlineCount === 0) {
-        throw new Error(
-          "No online nodes found. Make sure other blockchain nodes are running.",
-        );
-      }
-
-      if (scanResults.onlineCount === 1) {
-        console.log("ℹ️ Only current node found, running in single-node mode");
-        setAutoSetupComplete(true);
-        return {
-          success: true,
-          message: "Running in single-node mode",
-          nodeCount: 1,
-          singleNode: true,
-        };
-      }
-
-      // Initialize network with discovered nodes
-      const onlineNodeUrls = scanResults.nodes
-        .filter((node) => node.status === "online")
-        .map((node) => node.url)
-        .filter((url) => url !== networkInfo.currentNodeUrl); // Exclude current node
-
-      if (onlineNodeUrls.length > 0) {
-        console.log("🚀 Initializing network with nodes:", onlineNodeUrls);
-        await blockchainAPI.initializeNetwork(onlineNodeUrls);
+      try {
+        // Try to initialize the network using the backend endpoint
+        const initResult = await blockchainAPI.initializeNetwork();
+        console.log("🚀 Network initialization result:", initResult);
 
         // Run consensus to sync with the network
         console.log("🔄 Running initial consensus...");
@@ -456,12 +477,12 @@ export function useAutoNetworkSetup() {
 
         return {
           success: true,
-          message: `Network initialized with ${onlineNodeUrls.length} nodes`,
-          nodeCount: onlineNodeUrls.length + 1, // +1 for current node
+          message: "Network initialized successfully",
+          nodeCount: 5, // Backend initializes with predefined nodes (3001-3004)
         };
-      } else {
+      } catch (initError) {
         console.log(
-          "ℹ️ No other nodes to connect to, running in single-node mode",
+          "ℹ️ Network initialization failed, running in single-node mode",
         );
         setAutoSetupComplete(true);
         return {

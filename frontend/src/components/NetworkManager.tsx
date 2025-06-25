@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ErrorFallback, LoadingSpinner } from "@/components/ui/error-fallback";
 import { useNetwork } from "@/hooks/useBlockchain";
-import { blockchainAPI } from "@/services/api";
 import {
   Network,
   Server,
@@ -36,22 +35,6 @@ export function NetworkManager() {
     const [newNodeUrl, setNewNodeUrl] = useState("");
     const [isAddingNode, setIsAddingNode] = useState(false);
     const [isInitializing, setIsInitializing] = useState(false);
-    const [isScanning, setIsScanning] = useState(false);
-    const [scanResults, setScanResults] = useState<{
-      timestamp: string;
-      totalScanned: number;
-      onlineCount: number;
-      offlineCount: number;
-      nodes: Array<{
-        url: string;
-        port: number;
-        status: "online" | "offline";
-        error?: string;
-        chainLength?: number;
-        networkNodes?: number;
-      }>;
-      readyForNetwork: boolean;
-    } | null>(null);
     const [message, setMessage] = useState<{
       type: "success" | "error";
       text: string;
@@ -121,14 +104,7 @@ export function NetworkManager() {
         setIsInitializing(true);
         setMessage(null);
 
-        const defaultNodes = [
-          "http://localhost:3001",
-          "http://localhost:3002",
-          "http://localhost:3003",
-          "http://localhost:3004",
-        ];
-
-        await initializeNetwork(defaultNodes);
+        await initializeNetwork();
         setMessage({
           type: "success",
           text: "Network initialized successfully!",
@@ -141,31 +117,6 @@ export function NetworkManager() {
         });
       } finally {
         setIsInitializing(false);
-      }
-    };
-
-    const handleScanNodes = async () => {
-      try {
-        setIsScanning(true);
-        setMessage(null);
-
-        const results = await blockchainAPI.scanNodes();
-        setScanResults(results);
-        setMessage({
-          type: "success",
-          text: `Scan completed: ${results.onlineCount} nodes online, ${results.offlineCount} offline`,
-        });
-      } catch (err) {
-        console.error("Scan error:", err);
-        setMessage({
-          type: "error",
-          text:
-            err instanceof Error
-              ? err.message
-              : "Failed to scan nodes. Make sure the backend is running.",
-        });
-      } finally {
-        setIsScanning(false);
       }
     };
 
@@ -329,67 +280,10 @@ export function NetworkManager() {
           </CardContent>
         </Card>{" "}
         {/* Scan Results */}
-        {scanResults && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Network className="w-4 h-4" />
-                Port Scan
-              </CardTitle>
-              <CardDescription className="text-xs">
-                {new Date(scanResults.timestamp).toLocaleString()}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-2">
-                {scanResults.nodes.map((node) => (
-                  <div
-                    key={node.port}
-                    className="flex items-center justify-between p-2 border rounded text-sm"
-                  >
-                    <div className="flex items-center gap-2">
-                      {node.status === "online" ? (
-                        <Wifi className="w-3 h-3 text-green-600" />
-                      ) : (
-                        <WifiOff className="w-3 h-3 text-red-600" />
-                      )}
-                      <span className="font-mono">:{node.port}</span>
-                      {node.chainLength !== undefined && (
-                        <Badge variant="outline" className="text-xs px-1 py-0">
-                          {node.chainLength} blocks
-                        </Badge>
-                      )}
-                    </div>
-                    <Badge
-                      className={
-                        node.status === "online"
-                          ? "bg-green-100 text-green-800 border-green-200 text-xs"
-                          : "bg-red-100 text-red-800 border-red-200 text-xs"
-                      }
-                    >
-                      {node.status}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-3 flex items-center justify-between text-xs text-gray-600">
-                <span>
-                  {scanResults.onlineCount} online • {scanResults.offlineCount}{" "}
-                  offline
-                </span>
-                {scanResults.readyForNetwork && (
-                  <span className="text-green-600 flex items-center gap-1">
-                    ✓ Ready
-                  </span>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* Scan functionality removed - not available in backend */}
         {/* Network Nodes List */}
         <Card>
           <CardHeader>
-            {" "}
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="flex items-center gap-2">
@@ -401,24 +295,6 @@ export function NetworkManager() {
                 </CardDescription>
               </div>
               <div className="flex gap-2">
-                <Button
-                  onClick={handleScanNodes}
-                  disabled={isScanning}
-                  variant="outline"
-                  size="sm"
-                >
-                  {isScanning ? (
-                    <>
-                      <Clock className="w-4 h-4 mr-2 animate-spin" />
-                      Scanning...
-                    </>
-                  ) : (
-                    <>
-                      <Network className="w-4 h-4 mr-2" />
-                      Scan Ports
-                    </>
-                  )}
-                </Button>
                 <Button onClick={refetch} variant="outline" size="sm">
                   <RefreshCw className="w-4 h-4 mr-2" />
                   Refresh

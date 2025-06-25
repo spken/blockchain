@@ -4,8 +4,13 @@ import type {
   Transaction,
   Wallet,
   WalletBalance,
-  MempoolTransaction,
   NetworkInfo,
+  MineResponse,
+  TransactionBroadcastResponse,
+  FaucetResponse,
+  ValidationResponse,
+  ConsensusResponse,
+  NetworkInitResponse,
 } from "@/types/blockchain";
 
 // Default to localhost for development
@@ -32,7 +37,16 @@ class BlockchainAPI {
     });
 
     if (!response.ok) {
-      throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      let errorMessage;
+      try {
+        const errorJson = JSON.parse(errorText);
+        errorMessage =
+          errorJson.error || errorJson.message || `HTTP ${response.status}`;
+      } catch {
+        errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      }
+      throw new Error(errorMessage);
     }
 
     return response.json();
@@ -50,11 +64,12 @@ class BlockchainAPI {
   async getBlockByHash(hash: string): Promise<Block> {
     return this.request<Block>(`/blocks/${hash}`);
   }
-  async validateBlockchain(): Promise<{ isValid: boolean; message?: string }> {
-    const response = await this.request<{ valid: boolean }>("/validate");
-    return { isValid: response.valid };
+
+  async validateBlockchain(): Promise<ValidationResponse> {
+    return this.request<ValidationResponse>("/validate");
   }
-  // Transaction endpoints
+
+  // Transaction endpoints - matching backend exactly
   async createTransaction(transactionData: {
     fromAddress: string;
     toAddress: string;
@@ -62,49 +77,61 @@ class BlockchainAPI {
     fee?: number;
     payload?: any;
     privateKey: string;
-  }): Promise<{ message: string }> {
-    return this.request<{ message: string }>("/transaction/broadcast", {
-      method: "POST",
-      body: JSON.stringify(transactionData),
-    });
+    id?: string;
+  }): Promise<TransactionBroadcastResponse> {
+    return this.request<TransactionBroadcastResponse>(
+      "/transaction/broadcast",
+      {
+        method: "POST",
+        body: JSON.stringify(transactionData),
+      },
+    );
   }
 
-  async broadcastTransaction(
+  async sendTransaction(
     transaction: Transaction,
-  ): Promise<{ message: string }> {
-    return this.request<{ message: string }>("/transaction/broadcast", {
-      method: "POST",
-      body: JSON.stringify(transaction),
-    });
+  ): Promise<{ message: string; transaction: Transaction }> {
+    return this.request<{ message: string; transaction: Transaction }>(
+      "/transaction",
+      {
+        method: "POST",
+        body: JSON.stringify(transaction),
+      },
+    );
   }
 
   async getPendingTransactions(): Promise<Transaction[]> {
     return this.request<Transaction[]>("/transactions/pending");
   }
-  // Mining endpoints
+
+  // Mining endpoints - matching backend exactly
   async mineBlock(
     rewardAddress: string,
-  ): Promise<{ message: string; block: Block }> {
-    return this.request<{ message: string; block: Block }>("/mine", {
+    limit?: number,
+  ): Promise<MineResponse> {
+    return this.request<MineResponse>("/mine", {
       method: "POST",
-      body: JSON.stringify({ miningRewardAddress: rewardAddress }),
+      body: JSON.stringify({
+        miningRewardAddress: rewardAddress,
+        limit: limit,
+      }),
     });
   }
 
-  // Mempool endpoints
-  async getMempool(): Promise<MempoolTransaction[]> {
-    return this.request<MempoolTransaction[]>("/mempool");
+  // Mempool endpoints - backend returns Transaction[] directly
+  async getMempool(): Promise<Transaction[]> {
+    return this.request<Transaction[]>("/mempool");
   }
 
-  async getMempoolByFees(): Promise<MempoolTransaction[]> {
-    return this.request<MempoolTransaction[]>("/mempool/fees");
+  async getMempoolByFees(): Promise<Transaction[]> {
+    return this.request<Transaction[]>("/mempool/fees");
   }
 
-  async getMempoolByAge(): Promise<MempoolTransaction[]> {
-    return this.request<MempoolTransaction[]>("/mempool/age");
+  async getMempoolByAge(): Promise<Transaction[]> {
+    return this.request<Transaction[]>("/mempool/age");
   }
 
-  // Wallet endpoints
+  // Wallet endpoints - matching backend exactly
   async createWallet(): Promise<Wallet> {
     return this.request<Wallet>("/wallet", {
       method: "POST",
@@ -119,60 +146,65 @@ class BlockchainAPI {
     return this.request<WalletBalance>(`/wallet/balance/${address}`);
   }
 
-  async requestFaucet(address: string): Promise<{ message: string }> {
-    return this.request<{ message: string }>("/faucet", {
+  async requestFaucet(
+    address: string,
+    amount?: number,
+  ): Promise<FaucetResponse> {
+    return this.request<FaucetResponse>("/faucet", {
       method: "POST",
-      body: JSON.stringify({ address }),
+      body: JSON.stringify({ address, amount }),
     });
   }
-  // Network endpoints
+
+  // Network endpoints - matching backend exactly
   async getNetworkNodes(): Promise<NetworkInfo> {
     return this.request<NetworkInfo>("/nodes");
   }
 
-  async scanNodes(): Promise<{
-    timestamp: string;
-    totalScanned: number;
-    onlineCount: number;
-    offlineCount: number;
-    nodes: Array<{
-      url: string;
-      port: number;
-      status: "online" | "offline";
-      error?: string;
-      chainLength?: number;
-      networkNodes?: number;
-    }>;
-    readyForNetwork: boolean;
-  }> {
-    return this.request("/scan-nodes");
-  }
-
-  async registerNode(newNodeUrl: string): Promise<{ message: string }> {
-    return this.request<{ message: string }>("/register-and-broadcast-node", {
+  async registerAndBroadcastNode(
+    newNodeUrl: string,
+  ): Promise<{ note: string }> {
+    return this.request<{ note: string }>("/register-and-broadcast-node", {
       method: "POST",
       body: JSON.stringify({ newNodeUrl }),
     });
   }
 
-  async initializeNetwork(nodeUrls: string[]): Promise<{ message: string }> {
-    return this.request<{ message: string }>("/initialize-network", {
+  async registerNode(newNodeUrl: string): Promise<{ note: string }> {
+    return this.request<{ note: string }>("/register-node", {
       method: "POST",
-      body: JSON.stringify({ nodeUrls }),
+      body: JSON.stringify({ newNodeUrl }),
     });
   }
 
-  // Consensus endpoints
-  async runConsensus(): Promise<{
-    note: string;
-    chain: Block[];
-    wasReplaced?: boolean;
-  }> {
-    return this.request<{
-      note: string;
-      chain: Block[];
-      wasReplaced?: boolean;
-    }>("/consensus");
+  async registerNodesBulk(
+    allNetworkNodes: string[],
+  ): Promise<{ note: string }> {
+    return this.request<{ note: string }>("/register-nodes-bulk", {
+      method: "POST",
+      body: JSON.stringify({ allNetworkNodes }),
+    });
+  }
+
+  async initializeNetwork(): Promise<NetworkInitResponse> {
+    return this.request<NetworkInitResponse>("/initialize-network", {
+      method: "POST",
+    });
+  }
+
+  // Consensus endpoints - matching backend exactly
+  async runConsensus(): Promise<ConsensusResponse> {
+    return this.request<ConsensusResponse>("/consensus");
+  }
+
+  // Utility method for testing connectivity
+  async testConnection(): Promise<boolean> {
+    try {
+      await this.getNetworkNodes();
+      return true;
+    } catch {
+      return false;
+    }
   }
 }
 
